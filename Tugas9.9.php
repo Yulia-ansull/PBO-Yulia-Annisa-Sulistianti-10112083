@@ -1,35 +1,35 @@
 <?php
 
-// 3.a & 3.b: Class Induk
+// ==========================================
+// CLASS INDUK
+// ==========================================
 class uang_tabungan {
-    // 3.d: Hak akses protected agar bisa diakses oleh class anak saja
     protected $saldo;
-    private $nama; // Private: hanya bisa diakses di dalam class ini sendiri
+    private $nama_siswa;
 
-    // 3.f: Constructor untuk inisialisasi saldo awal dan nama
     public function __construct($nama, $saldo_awal) {
-        $this->nama = $nama;
+        $this->nama_siswa = $nama;
         $this->saldo = $saldo_awal;
     }
 
-    // 3.g: Method untuk menampilkan saldo
-    public function cek_saldo() {
-        return $this->saldo;
-    }
+    public function get_nama() { return $this->nama_siswa; }
+    public function cek_saldo() { return $this->saldo; }
 
-    public function get_nama() {
-        return $this->nama;
+    public function format_rp($angka) {
+        return "Rp " . number_format($angka, 0, ',', '.');
     }
 }
 
-// 3.a & 3.c: Class Anak (Siswa 1, 2, 3)
-// 3.e: Enkapsulasi memastikan siswa_1 tidak bisa menyentuh saldo siswa_2 karena berbeda instance
-class siswa_1 extends uang_tabungan {
+// ==========================================
+// CLASS ANAK
+// ==========================================
+class siswa1 extends uang_tabungan {
     public function setor($jumlah) {
-        $this->saldo += $jumlah;
+        if ($jumlah > 0) $this->saldo += $jumlah;
     }
+
     public function tarik($jumlah) {
-        if ($jumlah <= $this->saldo) {
+        if ($jumlah > 0 && $this->saldo >= $jumlah) {
             $this->saldo -= $jumlah;
             return true;
         }
@@ -37,86 +37,129 @@ class siswa_1 extends uang_tabungan {
     }
 }
 
-class siswa_2 extends uang_tabungan {
-    public function setor($jumlah) {
-        $this->saldo += $jumlah;
-    }
-    public function tarik($jumlah) {
-        if ($jumlah <= $this->saldo) {
-            $this->saldo -= $jumlah;
-            return true;
-        }
-        return false;
-    }
-}
+class siswa2 extends siswa1 {}
+class siswa3 extends siswa1 {}
 
-class siswa_3 extends uang_tabungan {
-    public function setor($jumlah) {
-        $this->saldo += $jumlah;
-    }
-    public function tarik($jumlah) {
-        if ($jumlah <= $this->saldo) {
-            $this->saldo -= $jumlah;
-            return true;
-        }
-        return false;
-    }
-}
 
-// 3.i: Menggunakan fopen untuk membaca input dari Command Prompt
-$input = fopen("php://stdin", "r");
+// ==========================================
+// MAIN PROGRAM
+// ==========================================
+$input_stream = fopen("php://stdin", "r");
 
-// 3.f: Penggunaan Array untuk menampung objek siswa
 $daftar_siswa = [
-    1 => new siswa_1("Budi (Siswa 1)", 50000),
-    2 => new siswa_2("Ani (Siswa 2)", 75000),
-    3 => new siswa_3("Caca (Siswa 3)", 100000)
+    new siswa1("Aymen Kauruf", 50000000),
+    new siswa2("Qeylan Asyarif", 12000000),
+    new siswa3("Seyna Syahrika", 1000000)
 ];
 
-// 3.f: Perulangan Utama Program
 while (true) {
-    echo "\n=== PROGRAM TABUNGAN SEKOLAH ===\n";
+    echo "\n======================================\n";
+    echo "       PROGRAM TABUNGAN SEKOLAH       \n";
+    echo "======================================\n";
+
     foreach ($daftar_siswa as $key => $s) {
-        echo "$key. " . $s->get_nama() . " (Saldo: Rp " . $s->cek_saldo() . ")\n";
+        echo ($key + 1) . ". " . $s->get_nama() . 
+             " | Saldo: " . $s->format_rp($s->cek_saldo()) . "\n";
     }
+
+    echo "--------------------------------------\n";
     echo "0. Keluar\n";
-    echo "Pilih Siswa (1-3): ";
-    
-    // 3.i: Menggunakan fgets untuk mengambil input
-    $pilihan = trim(fgets($input));
+    echo "Ketik Nomor / Nama Siswa: ";
 
-    if ($pilihan == '0') break;
+    $pilihan = trim(fgets($input_stream));
+    if ($pilihan === '0') break;
 
-    // 3.f: Percabangan untuk validasi pilihan
-    if (isset($daftar_siswa[$pilihan])) {
-        $siswa_aktif = $daftar_siswa[$pilihan];
-        
-        echo "\nMenu untuk " . $siswa_aktif->get_nama() . ":\n";
-        echo "1. Setor Tunai\n";
-        echo "2. Tarik Tunai\n";
-        echo "Pilih Aksi: ";
-        $aksi = trim(fgets($input));
+    $siswa_aktif = null;
 
-        // 3.h: Logika Setor dan Tarik Tunai
-        if ($aksi == '1') {
-            echo "Masukkan jumlah setor: ";
-            $jumlah = (int)trim(fgets($input));
-            $siswa_aktif->setor($jumlah);
-            echo "Berhasil! Saldo sekarang: Rp " . $siswa_aktif->cek_saldo() . "\n";
-        } elseif ($aksi == '2') {
-            echo "Masukkan jumlah tarik: ";
-            $jumlah = (int)trim(fgets($input));
-            if ($siswa_aktif->tarik($jumlah)) {
-                echo "Penarikan berhasil! Sisa saldo: Rp " . $siswa_aktif->cek_saldo() . "\n";
-            } else {
-                echo "Gagal! Saldo tidak mencukupi.\n";
+    // =========================
+    // CARI SISWA
+    // =========================
+    if (is_numeric($pilihan)) {
+
+        if (isset($daftar_siswa[$pilihan - 1])) {
+            $siswa_aktif = $daftar_siswa[$pilihan - 1];
+        }
+
+    } else {
+
+        $hasil_cari = [];
+        foreach ($daftar_siswa as $key => $s) {
+            if (strtolower($s->get_nama()) === strtolower($pilihan)) {
+                $hasil_cari[] = $s;
             }
         }
-    } else {
-        echo "Pilihan tidak valid!\n";
+
+        if (count($hasil_cari) == 1) {
+            $siswa_aktif = $hasil_cari[0];
+        } elseif (count($hasil_cari) > 1) {
+            echo "\n[!] Nama ganda, pilih salah satu:\n";
+            foreach ($hasil_cari as $i => $s) {
+                echo ($i+1) . ". " . $s->get_nama() . "\n";
+            }
+            echo "Pilih: ";
+            $sub = (int)trim(fgets($input_stream));
+            if (isset($hasil_cari[$sub - 1])) {
+                $siswa_aktif = $hasil_cari[$sub - 1];
+            } else {
+                echo "[!] Pilihan tidak valid.\n";
+            }
+        }
     }
+
+    // =========================
+    // TRANSAKSI
+    // =========================
+    if ($siswa_aktif) {
+
+        echo "\n>>> LOGIN: " . strtoupper($siswa_aktif->get_nama()) . " <<<\n";
+        echo "1. Setor | 2. Tarik | 3. Batal\nPilih: ";
+        $aksi = trim(fgets($input_stream));
+
+        if ($aksi == '1') {
+
+            echo "Jumlah Setor: ";
+            $jml = (int)trim(fgets($input_stream));
+
+            if ($jml <= 0) {
+                echo "[!] Jumlah tidak valid.\n";
+            } else {
+                $siswa_aktif->setor($jml);
+                echo "Berhasil! Saldo: " . 
+                     $siswa_aktif->format_rp($siswa_aktif->cek_saldo()) . "\n";
+            }
+
+        } elseif ($aksi == '2') {
+
+            echo "Jumlah Tarik: ";
+            $jml = (int)trim(fgets($input_stream));
+
+            if ($jml <= 0) {
+                echo "[!] Jumlah tidak valid.\n";
+            } elseif ($siswa_aktif->tarik($jml)) {
+                echo "Berhasil! Sisa: " . 
+                     $siswa_aktif->format_rp($siswa_aktif->cek_saldo()) . "\n";
+            } else {
+                echo "[!] Saldo tidak cukup.\n";
+            }
+
+        } elseif ($aksi == '3') {
+            echo "Batal.\n";
+        } else {
+            echo "[!] Menu tidak valid.\n";
+        }
+
+    } else {
+
+        if (is_numeric($pilihan)) {
+            echo "\n[!] Data Tida Ditemukan.\n";
+        } else {
+            echo "\n[!] Nama siswa tidak ditemukan.\n";
+        }
+
+    }
+
+    echo "\nTekan Enter...";
+    fgets($input_stream);
 }
 
-echo "Terima kasih telah menggunakan program tabungan.\n";
-fclose($input);
-?>
+fclose($input_stream);
